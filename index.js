@@ -28,7 +28,7 @@ async function main() {
             connection.query(queries.queryForAllEmployees, function (err, result, fields) {
                 if (err) throw err;
                 console.table(result);
-                main();
+                exiter();
             });
             break;
 
@@ -51,7 +51,7 @@ async function main() {
                 console.table(result.map((val) => {
                     return { "Title": val.Title, "Salary": val.Salary, "Department": val.Department };
                 }));
-                main();
+                exiter();
             });
 
         case "Exit":
@@ -76,7 +76,7 @@ function viewEmployeesByRole() {
                 function (err, result, fields) {
                     if (err) throw err;
                     console.table(result);
-                    main();
+                    exiter();
             });
 
         });
@@ -104,12 +104,27 @@ function viewEmployeesByManager() {
                 function (err, result, fields) {
                     if (err) throw err;
                     console.table(result);
-                    main();
+                    exiter();
                 });
 
         });
 
     });
+}
+
+function exiter() {
+    inquirer.prompt({
+        type: "confirm",
+        message: "Run another command? ('n' will exit the program)",
+        name: "continue"
+    }).then( (answer) => {
+        if (answer.continue) {
+            main();
+        } else {
+            connection.end();
+            return;
+        }
+    })
 }
 
 // Run the program
