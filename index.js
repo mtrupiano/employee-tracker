@@ -25,21 +25,21 @@ async function main() {
 
     switch (select.mainSelect) {
         case "View all employees":
-
             connection.query(queries.queryForAllEmployees, function (err, result, fields) {
                 if (err) throw err;
                 console.table(result);
                 main();
+                return;
             });
-
-            break;
 
         case "View employees by role":
             viewEmployeesByRole();
-            
-            break;
         case "View employees by manager":
             viewEmployeesByManager();
+
+        case "Add employee":
+            break;
+        case "Remove employee":
             break;
         
 
@@ -48,8 +48,8 @@ async function main() {
                 if (err) throw err;
                 console.table(result);
                 main();
+                return;
             });
-            break;
 
         case "Exit":
             connection.end();
@@ -61,7 +61,7 @@ async function main() {
 function viewEmployeesByRole() {
     connection.query(queries.queryForAllRoles, function (err, result, fields) {
         if (err) throw err;
-        
+
         inquirer.prompt( {
             type:"list",
             message:"Select a role",
@@ -73,6 +73,8 @@ function viewEmployeesByRole() {
                 function (err, result, fields) {
                     if (err) throw err;
                     console.table(result);
+                    main();
+                    return;
             });
 
         });
@@ -87,7 +89,7 @@ function viewEmployeesByManager() {
         inquirer.prompt({
             type: "list",
             message: "Select a manager",
-            choices: result.map((val) => { 
+            choices: result.map( (val) => { 
                                     return { 
                                         "value": val.id, 
                                         "name": `${val.first_name} ${val.last_name}` 
@@ -100,6 +102,8 @@ function viewEmployeesByManager() {
                 function (err, result, fields) {
                     if (err) throw err;
                     console.table(result);
+                    main();
+                    return;
                 });
 
         });
