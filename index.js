@@ -25,17 +25,21 @@ async function main() {
 
     switch (select.mainSelect) {
         case "View all employees":
+
             connection.query(queries.queryForAllEmployees, function (err, result, fields) {
                 if (err) throw err;
                 console.table(result);
                 main();
             });
+
             break;
+
         case "View employees by role":
             viewEmployeesByRole();
             
             break;
         case "View employees by manager":
+            viewEmployeesByManager();
             break;
         
 
@@ -70,6 +74,33 @@ function viewEmployeesByRole() {
                     if (err) throw err;
                     console.table(result);
             });
+
+        });
+
+    });
+}
+
+function viewEmployeesByManager() {
+    connection.query(queries.queryForAllManagers, function (err, result, fields) {
+        if (err) throw err;
+
+        inquirer.prompt({
+            type: "list",
+            message: "Select a manager",
+            choices: result.map((val) => { 
+                                    return { 
+                                        "value": val.id, 
+                                        "name": `${val.first_name} ${val.last_name}` 
+                                    }; 
+                                }),
+            name: "selectedManager"
+        }).then((selection) => {
+
+            connection.query(queries.queryForEmployeesByManager, selection.selectedManager,
+                function (err, result, fields) {
+                    if (err) throw err;
+                    console.table(result);
+                });
 
         });
 

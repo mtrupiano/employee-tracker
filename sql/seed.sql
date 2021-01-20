@@ -3,7 +3,7 @@ INSERT INTO department VALUES
     ( DEFAULT, "accounting" );
 
 INSERT INTO role VALUES 
-    ( DEFAULT, "engineering manager", 130000, 1 ),
+    ( DEFAULT, "manager", 130000, 1 ),
     ( DEFAULT, "engineer", 90000, 1 ),
     ( DEFAULT, "intern", 45000, 1 );
 
