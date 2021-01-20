@@ -29,13 +29,15 @@ async function main() {
                 if (err) throw err;
                 console.table(result);
                 main();
-                return;
             });
+            break;
 
         case "View employees by role":
             viewEmployeesByRole();
+            break;
         case "View employees by manager":
             viewEmployeesByManager();
+            break;
 
         case "Add employee":
             break;
@@ -50,7 +52,6 @@ async function main() {
                     return { "Title": val.Title, "Salary": val.Salary, "Department": val.Department };
                 }));
                 main();
-                return;
             });
 
         case "Exit":
@@ -76,7 +77,6 @@ function viewEmployeesByRole() {
                     if (err) throw err;
                     console.table(result);
                     main();
-                    return;
             });
 
         });
@@ -105,7 +105,6 @@ function viewEmployeesByManager() {
                     if (err) throw err;
                     console.table(result);
                     main();
-                    return;
                 });
 
         });
