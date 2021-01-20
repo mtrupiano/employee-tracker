@@ -16,6 +16,7 @@
         "Remove role",
         "View departments",
         "Add department",
-        "Remove department"
+        "Remove department",
+        "Exit"
     ]
 }

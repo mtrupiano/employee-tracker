@@ -1,5 +1,3 @@
-
-
 INSERT INTO department VALUES 
     ( DEFAULT, "development" ),
     ( DEFAULT, "accounting" );

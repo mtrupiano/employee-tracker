@@ -23,13 +23,58 @@ async function main() {
 
     const select = await inquirer.prompt(mainPrompts);
 
-    switch (select) {
+    switch (select.mainSelect) {
         case "View all employees":
-            connection.query(queries.queryForAllEmployees(), function (err, result, fields) {
-                cTable(result);
+            connection.query(queries.queryForAllEmployees, function (err, result, fields) {
+                if (err) throw err;
+                console.table(result);
+                main();
             });
             break;
         case "View employees by role":
+            viewEmployeesByRole();
+            
             break;
+        case "View employees by manager":
+            break;
+        
+
+        case "View roles":
+            connection.query(queries.queryForAllRoles, function (err, result, fields) {
+                if (err) throw err;
+                console.table(result);
+                main();
+            });
+            break;
+
+        case "Exit":
+            connection.end();
+            return;
     }
+
 }
+
+function viewEmployeesByRole() {
+    connection.query(queries.queryForAllRoles, function (err, result, fields) {
+        if (err) throw err;
+        
+        inquirer.prompt( {
+            type:"list",
+            message:"Select a role",
+            choices: result.map( (val) => { return { "value": val.id, "name": val.Title }; } ),
+            name:"selectedRole"
+        } ).then( (selection) => {
+
+            connection.query(queries.queryForEmployeesByRole, selection.selectedRole,
+                function (err, result, fields) {
+                    if (err) throw err;
+                    console.table(result);
+            });
+
+        });
+
+    });
+}
+
+// Run the program
+main();
