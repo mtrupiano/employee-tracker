@@ -46,7 +46,9 @@ async function main() {
         case "View roles":
             connection.query(queries.queryForAllRoles, function (err, result, fields) {
                 if (err) throw err;
-                console.table(result);
+                console.table(result.map((val) => {
+                    return { "Title": val.Title, "Salary": val.Salary, "Department": val.Department };
+                }));
                 main();
                 return;
             });
