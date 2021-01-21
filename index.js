@@ -90,8 +90,8 @@ async function removeEmployee() {
                     .query("SELECT * FROM employee WHERE manager_id = ?", employee.id);
         
         if (mngrsEmployees.length > 0) {
-            // handle moving employees
             await confirmMngrDelete(employee);
+            exiter();
             return;
         }
     }
@@ -116,54 +116,40 @@ async function removeEmployee() {
 }
 
 async function confirmMngrDelete(mngr) {
+    const [mngrsEmployees, fields]
+        = await connection.promise().query(queries.queryForEmployeesByManager, mngr.id);
+
     const action = await inquirer.prompt({
         type: "list",
         message: "You are attempting to remove a manager who has employees.\n  " + 
-                 "You must either move these employees to a new manager or delete them.",
+                 "You must either move these employees to a new manager or REMOVE them.",
         name: "action",
         choices: [
-            "MOVE THIS MANAGER'S EMPLOYEES TO A NEW MANAGER",
-            "DELETE ALL OF THIS MANAGER'S EMPLOYEES",
+            "REMOVE THIS MANAGER AND ALL OF THEIR EMPLOYEES",
             "GO BACK"
         ]
     });
 
-    switch (action.action) {
-        case ("MOVE THIS MANAGER'S EMPLOYEES TO A NEW MANAGER"):
-            moveManagersEmployees(mngr);
-            return;
-        case ("DELETE ALL OF THIS MANAGER'S EMPLOYEES"):
+    if (action.action === "REMOVE THIS MANAGER AND ALL OF THEIR EMPLOYEES") {
+        console.table(`${mngr.Name.toUpperCase()}'S EMPLOYEES`, mngrsEmployees);
 
-            const [mngrsEmployees, fields]
-                = await connection.promise().query(queries.queryForEmployeesByManager, mngr.id);
-            
-            console.table(`${mngr.Name.toUpperCase()}'S EMPLOYEES`,mngrsEmployees);
+        const confirm = await inquirer.prompt({
+            type: "confirm",
+            message: "Are you sure? This action will remove " + mngr.Name + 
+                " and all of their employees (listed above)." +
+                "\n  WARNING: THIS ACTION IS PERMANENT",
+            name: "confirm"
+        });
 
-            const confirm = await inquirer.prompt({
-                type: "confirm",
-                message: "Are you sure? This action will delete all of the above employees." +
-                            "\n  WARNING: THIS ACTION IS PERMANENT",
-                name: "confirm"
-            });
-
-            if (confirm.confirm) {
-                await connection.promise().query("DELETE FROM employee WHERE manager_id=?", mngr.id);
-            } else {
-                exiter();
-                return;
-            }
-
-            return;
-
-        default:
+        if (confirm.confirm) {
+            await connection.promise().query("DELETE FROM employee WHERE manager_id=?", mngr.id);
+            await connection.promise().query("DELETE FROM employee WHERE id = ?", mngr.id);
+        } else {
             console.log("REMOVE operation aborted.");
-            exiter();
-            return;
+        }
+    } else {
+        console.log("REMOVE operation aborted.");   
     }
-
-}
-
-async function moveManagersEmployees(mngr) {
 
 }
 
@@ -233,7 +219,11 @@ function viewEmployeesByRole() {
             connection.query(queries.queryForEmployeesByRole, selection.selectedRole,
                 function (err, result, fields) {
                     if (err) throw err;
-                    console.table(result);
+                    if (result.length === 0) {
+                        console.log( "\n  NO EMPLOYEES FOUND IN THAT ROLE\n" );
+                    } else {
+                        console.table(result);
+                    }
                     exiter();
             });
 
@@ -269,11 +259,12 @@ function viewEmployeesByManager() {
 
 function exiter() {
     inquirer.prompt({
-        type: "confirm",
-        message: "Run another command? ('n' will exit the program)",
-        name: "continue"
+        type: "list",
+        message: "Continue? (Selecting 'NO' will exit the program.)",
+        name: "continue",
+        choices: [ "YES", "NO" ]
     }).then( (answer) => {
-        if (answer.continue) {
+        if (answer.continue === "YES") {
             main();
         } else {
             connection.end();
