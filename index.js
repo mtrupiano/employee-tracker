@@ -91,6 +91,7 @@ async function removeEmployee() {
         
         if (mngrsEmployees.length > 0) {
             // handle moving employees
+            await confirmMngrDelete(employee);
             return;
         }
     }
@@ -108,10 +109,62 @@ async function removeEmployee() {
             .promise()
             .query("DELETE FROM employee WHERE id = ?", employeeToRemove.selected);
     } else {
-        console.log("Operation aborted.");
+        console.log("REMOVE operation aborted.");
     }
 
     exiter();
+}
+
+async function confirmMngrDelete(mngr) {
+    const action = await inquirer.prompt({
+        type: "list",
+        message: "You are attempting to remove a manager who has employees.\n  " + 
+                 "You must either move these employees to a new manager or delete them.",
+        name: "action",
+        choices: [
+            "MOVE THIS MANAGER'S EMPLOYEES TO A NEW MANAGER",
+            "DELETE ALL OF THIS MANAGER'S EMPLOYEES",
+            "GO BACK"
+        ]
+    });
+
+    switch (action.action) {
+        case ("MOVE THIS MANAGER'S EMPLOYEES TO A NEW MANAGER"):
+            moveManagersEmployees(mngr);
+            return;
+        case ("DELETE ALL OF THIS MANAGER'S EMPLOYEES"):
+
+            const [mngrsEmployees, fields]
+                = await connection.promise().query(queries.queryForEmployeesByManager, mngr.id);
+            
+            console.table(`${mngr.Name.toUpperCase()}'S EMPLOYEES`,mngrsEmployees);
+
+            const confirm = await inquirer.prompt({
+                type: "confirm",
+                message: "Are you sure? This action will delete all of the above employees." +
+                            "\n  WARNING: THIS ACTION IS PERMANENT",
+                name: "confirm"
+            });
+
+            if (confirm.confirm) {
+                await connection.promise().query("DELETE FROM employee WHERE manager_id=?", mngr.id);
+            } else {
+                exiter();
+                return;
+            }
+
+            return;
+
+        default:
+            console.log("REMOVE operation aborted.");
+            exiter();
+            return;
+    }
+
+}
+
+async function moveManagersEmployees(mngr) {
+
 }
 
 async function addEmployee() {
