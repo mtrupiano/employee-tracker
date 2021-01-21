@@ -13,10 +13,10 @@ const connection = mysql.createConnection({
     database: 'employees'
 });
 
-// connection.connect((err) => {
-//     if (err) throw err;
-//     console.log('connected as id ' + connection.threadId);
-// });
+connection.connect((err) => {
+    if (err) throw err;
+    main();
+});
 
 async function main() {
 
@@ -97,7 +97,7 @@ async function addEmployee() {
         // present another prompt for user to select new employee's manager
         const [managers, fields] = 
             await connection.promise().query("SELECT * FROM employee WHERE role_id = 1");
-
+        
         const manager = await inquirer.prompt({
             "type": "list",
             "message": "Select the employee's manager:",
@@ -187,6 +187,3 @@ function exiter() {
         }
     })
 }
-
-// Run the program
-main();
