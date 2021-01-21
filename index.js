@@ -26,9 +26,11 @@ async function main() {
         case "View all employees":
             connection.query(queries.queryForAllEmployees, function (err, result, fields) {
                 if (err) throw err;
-                console.table(result.map( val =>
-                    ( { Name: val.Name, Title: val.Title, Manager: val.Manager } )
-                ));
+                console.table(
+                    result.map( 
+                        emp => ( { Name: emp.Name, Title: emp.Title, Manager: emp.Manager } )
+                    )
+                );
                 exiter();
             });
             break;
@@ -51,8 +53,11 @@ async function main() {
         case "View roles":
             connection.query(queries.queryForAllRoles, function (err, result, fields) {
                 if (err) throw err;
-                console.table(result.map( 
-                    val => ({ Title: val.Title, Salary: val.Salary, Department: val.Department }) ));
+                console.table( 
+                    result.map( 
+                        role => ({ Title: role.Title, Salary: role.Salary, Department: role.Department }) 
+                    )
+                );
                 exiter();
             });
 
@@ -71,7 +76,7 @@ async function removeEmployee() {
         type: "list",
         message:"Select an employee to remove",
         name: "selected",
-        choices: employees.map( val => ({ value: val.id, name: val.Name }) )
+        choices: employees.map( emp => ({ value: emp.id, name: emp.Name }) )
     });
 
     let employee = employees.find( e => e.id === employeeToRemove.selected );
@@ -126,7 +131,7 @@ async function addEmployee() {
         }, {
             "type": "list",
             "message": "Select the employee's role:",
-            "choices": roles.map( val => ({ value: val.id, name: val.Title }) ),
+            "choices": roles.map( role => ({ value: role.id, name: role.Title }) ),
             "name": "role"
         }
     ]);
@@ -145,7 +150,7 @@ async function addEmployee() {
             "message": "Select the employee's manager:",
             "name": "manager",
             "choices": managers.map(
-                    val => ({ value: val.id, name: `${val.last_name}, ${val.first_name}` }) )
+                mngr => ({ value: mngr.id, name: `${mngr.last_name}, ${mngr.first_name}` }) )
         });
 
         newEmployee["manager"] = manager.manager;
