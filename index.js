@@ -79,18 +79,19 @@ async function removeEmployee() {
         choices: employees.map( emp => ({ value: emp.id, name: emp.Name }) )
     });
 
-    let employee = employees.find( e => e.id === employeeToRemove.selected );
+    const employee = employees.find( e => e.id === employeeToRemove.selected );
 
     // Handle if employee is a manager
     if (employee.role_id === 1) {
         // Check if manager has any employees
-        const [mngrsEmployees, fields] 
-            = connection
-                .promise()
-                .query("SELECT * FROM employee WHERE manager_id = ?", employee.id);
+        const [mngrsEmployees, fields] = 
+            await connection
+                    .promise()
+                    .query("SELECT * FROM employee WHERE manager_id = ?", employee.id);
         
         if (mngrsEmployees.length > 0) {
             // handle moving employees
+            return;
         }
     }
 
@@ -131,8 +132,8 @@ async function addEmployee() {
         }, {
             "type": "list",
             "message": "Select the employee's role:",
-            "choices": roles.map( role => ({ value: role.id, name: role.Title }) ),
-            "name": "role"
+            "name": "role",
+            "choices": roles.map( role => ({ value: role.id, name: role.Title }) )
         }
     ]);
 
@@ -169,12 +170,12 @@ function viewEmployeesByRole() {
     connection.query(queries.queryForAllRoles, function (err, result, fields) {
         if (err) throw err;
 
-        inquirer.prompt( {
+        inquirer.prompt({
             type:"list",
             message:"Select a role",
-            choices: result.map( val => ({ value: val.id, name: val.Title }) ),
-            name:"selectedRole"
-        } ).then( (selection) => {
+            name:"selectedRole",
+            choices: result.map( val => ({ value: val.id, name: val.Title }) )
+        }).then( (selection) => {
 
             connection.query(queries.queryForEmployeesByRole, selection.selectedRole,
                 function (err, result, fields) {
@@ -195,9 +196,10 @@ function viewEmployeesByManager() {
         inquirer.prompt({
             type: "list",
             message: "Select a manager",
+            name: "selectedManager",
             choices: result.map( 
-                val => ({ value: val.id, name: `${val.first_name} ${val.last_name}` }) ),
-            name: "selectedManager"
+                val => ({ value: val.id, name: `${val.first_name} ${val.last_name}` }) 
+            )
         }).then((selection) => {
 
             connection.query(queries.queryForEmployeesByManager, selection.selectedManager,
