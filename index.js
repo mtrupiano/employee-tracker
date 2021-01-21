@@ -26,7 +26,13 @@ async function main() {
         case "View all employees":
             connection.query(queries.queryForAllEmployees, function (err, result, fields) {
                 if (err) throw err;
-                console.table(result);
+                console.table(result.map((val) => {
+                    return {
+                        Name: val.Name,
+                        Title: val.Title,
+                        Manager: val.Manager
+                    };
+                }));
                 exiter();
             });
             break;
@@ -42,6 +48,7 @@ async function main() {
             await addEmployee();
             break;
         case "Remove employee":
+            await removeEmployee();
             break;
         
 
@@ -59,6 +66,53 @@ async function main() {
             return;
     }
 
+}
+
+async function removeEmployee() {
+    const [employees, fields] = 
+        await connection.promise().query(queries.queryForAllEmployees);
+
+    const employeeToRemove = await inquirer.prompt({
+        type: "list",
+        message:"Select an employee to remove",
+        name: "selected",
+        choices: employees.map((val) => {
+            return {
+                value: val.id,
+                name: val.Name
+            }
+        })
+    });
+
+    let employee = employees.find(e => e.id === employeeToRemove.selected);
+
+    // Handle if employee is a manager
+    if (employee.role_id === 1) {
+        // Check if manager has any employees
+        const [mngrsEmployees, fields] 
+            = connection.promise().query("SELECT * FROM employee WHERE manager_id = ?", employee.id);
+        
+        if (mngrsEmployees.length > 0) {
+            // handle moving employees
+        }
+    }
+
+    // Prompt user to confirm delete, inform them of permanent operation
+    const confirmDelete = await inquirer.prompt({
+        type: "confirm",
+        message: `Confirm deleting employee: ${employee.Name} (id #${employeeToRemove.selected})\n  WARNING: THIS ACTION IS PERMANENT`,
+        name: "confirm"
+    });
+
+    if (confirmDelete.confirm) {
+        await connection
+            .promise()
+            .query("DELETE FROM employee WHERE id = ?", employeeToRemove.selected);
+    } else {
+        console.log("Operation aborted.");
+    }
+
+    exiter();
 }
 
 async function addEmployee() {
