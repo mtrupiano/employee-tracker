@@ -92,7 +92,8 @@ async function removeEmployee() {
     // Prompt user to confirm delete, inform them of permanent operation
     const confirmDelete = await inquirer.prompt({
         type: "confirm",
-        message: `Confirm deleting employee: ${employee.Name} (id #${employeeToRemove.selected})\n  WARNING: THIS ACTION IS PERMANENT`,
+        message: "Confirm deleting employee: " + employee.Name + 
+                    " (id #" + employee.id + ")\n  WARNING: THIS ACTION IS PERMANENT",
         name: "confirm"
     });
 
