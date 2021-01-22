@@ -334,9 +334,11 @@ async function updateEmployeeMngr() {
 }
 
 async function removeEmployee() {
+    // Query for all employees
     const [employees, fields] = 
         await connection.promise().query(queries.queryForAllEmployees);
 
+    // Prompt user to select an employee to remove
     const employeeToRemove = await inquirer.prompt({
         type: "list",
         message:"Select an employee to remove",
@@ -346,8 +348,8 @@ async function removeEmployee() {
 
     const employee = employees.find( e => e.id === employeeToRemove.selected );
 
-    // Handle if employee is a manager
-    if (employee.role_id === 1) {
+    // Check/handle if employee is a manager
+    if (employee.role.Title === "manager") {
         // Check if manager has any employees
         const [mngrsEmployees, fields] = 
             await connection
@@ -355,7 +357,7 @@ async function removeEmployee() {
                     .query("SELECT * FROM employee WHERE manager_id = ?", employee.id);
         
         if (mngrsEmployees.length > 0) {
-            await confirmMngrDelete(employee);
+            await confirmMngrDelete(employee, mngrsEmployees);
             return;
         }
     }
@@ -369,6 +371,7 @@ async function removeEmployee() {
         name: "confirm"
     });
 
+    // Perform query or abort based on response to confirmation prompt
     if (confirmDelete.confirm) {
         await connection
             .promise()
@@ -378,10 +381,10 @@ async function removeEmployee() {
     }
 }
 
-async function confirmMngrDelete(mngr) {
-    const [mngrsEmployees, fields]
-        = await connection.promise().query(queries.queryForEmployeesByManager, mngr.id);
-
+// Helper function to handle deleting all employees attached to a manager
+async function confirmMngrDelete(mngr, mngrsEmployees) {
+    // Warn user that they have to delete all of the manager's employees if 
+    // they want to delete the manager
     const action = await inquirer.prompt({
         type: "list",
         message: "You are attempting to remove a manager who has employees.\n  " + 
@@ -394,6 +397,8 @@ async function confirmMngrDelete(mngr) {
     });
 
     if (action.action === "REMOVE THIS MANAGER AND ALL OF THEIR EMPLOYEES") {
+        // Confirm and warn the user that the manager and all their employees
+        // will be permanently removed
         console.table(`${mngr.Name.toUpperCase()}'S EMPLOYEES`, mngrsEmployees);
 
         const confirm = await inquirer.prompt({
@@ -404,6 +409,7 @@ async function confirmMngrDelete(mngr) {
             name: "confirm"
         });
 
+        // Perform queries or abort based on response to confirmation prompt
         if (confirm.confirm) {
             await connection.promise().query("DELETE FROM employee WHERE manager_id=?", mngr.id);
             await connection.promise().query("DELETE FROM employee WHERE id = ?", mngr.id);
@@ -552,14 +558,15 @@ function viewEmployeesByManager() {
     });
 }
 
+// Present a prompt to return to the main menu or exit the program
 function exiter() {
     inquirer.prompt({
         type: "list",
-        message: "Continue? (Selecting 'NO' will exit the program.)",
+        message: "Continue/exit?",
         name: "continue",
-        choices: [ "YES", "NO" ]
+        choices: [ "MAIN MENU", "EXIT" ]
     }).then( (answer) => {
-        if (answer.continue === "YES") {
+        if (answer.continue === "MAIN MENU") {
             main();
         } else {
             connection.end();
