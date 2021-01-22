@@ -38,33 +38,36 @@ async function main() {
                     )
                 );
                 exiter();
+                
             });
-            break;
+            return;
 
         case "View employees by role":
-            viewEmployeesByRole();
-            break;
+            await viewEmployeesByRole();
+            return;
 
         case "View employees by manager":
-            viewEmployeesByManager();
-            break;
+            await viewEmployeesByManager();
+            return;
 
         case "Add employee":
             await addEmployee();
-            break;
+            exiter();
+            return;
         case "Remove employee":
             await removeEmployee();
-            break;
+            exiter();
+            return;
 
         case "Update employee role":
             await updateEmployeeRole();
             exiter();
-            break;
+            return;
+
         case "Update employee manager":
             await updateEmployeeMngr();
             exiter();
-            break;
-        
+            return;
 
         case "View roles":
             connection.query(queries.queryForAllRoles, function (err, result, fields) {
@@ -77,6 +80,7 @@ async function main() {
                 exiter();
             });
             return;
+
         case "View departments":
             connection.query(queries.queryForAllDepartments, function (err, result, fields) {
                 if (err) throw err;
@@ -352,7 +356,6 @@ async function removeEmployee() {
         
         if (mngrsEmployees.length > 0) {
             await confirmMngrDelete(employee);
-            exiter();
             return;
         }
     }
@@ -373,8 +376,6 @@ async function removeEmployee() {
     } else {
         console.log("REMOVE operation aborted.");
     }
-
-    exiter();
 }
 
 async function confirmMngrDelete(mngr) {
@@ -442,6 +443,12 @@ async function addEmployee() {
     // Get list of possible roles from the database
     const [roles, fields2] = await connection.promise().query(
         "SELECT * FROM role WHERE department_id = ?", newEmployee.department);
+    
+    if (roles.length === 0) {
+        console.log("/n  There are no roles assigned to this department." +
+            "Please create roles before adding employees to this department.");
+        return;
+    }
 
     const newRole = await inquirer.prompt({
         type: "list",
@@ -483,8 +490,6 @@ async function addEmployee() {
         .promise()
         .query("INSERT INTO employee VALUES (DEFAULT, ?, ?, ?, ?)", 
                 Object.values(newEmployee));
-    
-    exiter();
 }
 
 function viewEmployeesByRole() {
