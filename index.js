@@ -31,6 +31,7 @@ async function main() {
                         emp => ({ 
                                     Name: emp.Name, 
                                     Title: emp.Title, 
+                                    Salary: emp.Salary,
                                     Department: emp.Department,
                                     Manager: emp.Manager
                                 })
@@ -85,23 +86,17 @@ async function main() {
             return;
 
         case "Add department":
-            inquirer.prompt({
-                type: "input",
-                message:"Enter new department name: ",
-                name: "depName"
-            }).then( (ans) => {
-                connection.query("INSERT INTO department VALUES (DEFAULT, ?)", 
-                                    ans.depName, 
-                                    function (err, result, fields) {
-                                        if (err) throw err;
-                                        exiter();
-                                        return;
-                                    });
-            });
+            await addDepartment();
+            exiter();
             return;
 
         case "Add role":
             await addRole();
+            exiter();
+            return;
+        
+        case "Remove role":
+            await removeRole();
             exiter();
             return;
 
@@ -110,6 +105,106 @@ async function main() {
             return;
     }
 
+}
+
+async function removeRole() {
+    const [roles, fields] = 
+        await connection.promise().query(queries.queryForAllRoles);
+
+    const roleSelect = await inquirer.prompt({
+        type: "list",
+        message: "Select role to remove:",
+        name: "selection",
+        choices: roles.map( 
+            role => ({ 
+                        value: role.id, 
+                        name: `${role.Title} (${role.Department})` 
+                    })
+        )
+    });
+
+    const selectedRole = roles.find( role => role.id === roleSelect.selection);
+    const [employees, fields1] = 
+        await connection.promise().query(queries.queryForEmployeesByRole, selectedRole.id);
+
+    if (employees.length > 0) {
+        
+        const confirmRoleDelete = await inquirer.prompt({
+            type: "list",
+            message: "There are employees assigned to this role." + 
+                " You must either assign these employees to a different role" + 
+                " or REMOVE all employees assigned this role.",
+            name: "selection",
+            choices: ["REMOVE ALL EMPLOYEES ASSIGNED THIS ROLE", "GO BACK"]
+        });
+        
+        if (confirmRoleDelete.selection === "GO BACK") {
+            console.log("REMOVE operation aborted.");
+            return;
+        } else {
+            console.table(employees);
+            const finalConfirm = await inquirer.prompt({
+                type: "confirm",
+                message: "Are you sure? This action will remove the " + selectedRole.Title +
+                    " role from the " + selectedRole.Department + " department as well as " +
+                    "all of the employees currently assigned this role (listed above)." + 
+                    "\n  WARNING: THIS ACTION IS PERMANENT AND CANNOT BE UNDONE!",
+                name: "confirm"
+            });
+
+            if (finalConfirm.confirm) {
+                await connection.promise().query("DELETE FROM employee WHERE role_id=?", selectedRole.id);
+                await connection.promise().query("DELETE FROM role WHERE id = ?", selectedRole.id);
+                console.log("\n  DELETED the " + 
+                                selectedRole.Title + " role from the " + 
+                                selectedRole.Department + " department." );
+            } else {
+                console.log("REMOVE operation aborted.");
+            }
+        }
+    } else {
+
+        const finalConfirm = await inquirer.prompt({
+            type: "confirm",
+            message: "Are you sure? This action will remove the " + selectedRole.Title +
+                " role from the " + selectedRole.Department + " department." +
+                "\n  WARNING: THIS ACTION IS PERMANENT AND CANNOT BE UNDONE!",
+            name: "confirm"
+        });
+
+        if (finalConfirm.confirm) {
+            await connection.promise().query("DELETE FROM role WHERE id = ?", selectedRole.id);
+            console.log("\n  DELETED the " +
+                selectedRole.Title + " role from the " +
+                selectedRole.Department + " department.");
+        } else {
+            console.log("REMOVE operation aborted.");
+        }
+    }
+
+}
+
+async function addDepartment() {
+    
+    const depName = await inquirer.prompt({
+        type: "input",
+        message: "Enter new department name: ",
+        name: "depName"
+    });
+
+    const confirmAdd = await inquirer.prompt({
+        type: "confirm",
+        message: "Confirm adding department: " + depName.depName,
+        name: "confirm"
+    });
+        
+    if (confirmAdd.confirm) {
+        await connection
+                .promise()
+                .query("INSERT INTO department VALUES (DEFAULT, ?)", depName.depName);
+    } else {
+        console.log("Department ADD operation aborted.");
+    }
 }
 
 async function addRole() {
@@ -266,7 +361,8 @@ async function removeEmployee() {
     const confirmDelete = await inquirer.prompt({
         type: "confirm",
         message: "Confirm deleting employee: " + employee.Name + 
-                    " (id #" + employee.id + ")\n  WARNING: THIS ACTION IS PERMANENT",
+                    " (id #" + employee.id + 
+                    ")\n  WARNING: THIS ACTION IS PERMANENT AND CANNOT BE UNDONE!",
         name: "confirm"
     });
 
@@ -303,7 +399,7 @@ async function confirmMngrDelete(mngr) {
             type: "confirm",
             message: "Are you sure? This action will remove " + mngr.Name + 
                 " and all of their employees (listed above)." +
-                "\n  WARNING: THIS ACTION IS PERMANENT",
+                "\n  WARNING: THIS ACTION IS PERMANENT AND CANNOT BE UNDONE!",
             name: "confirm"
         });
 
@@ -441,7 +537,7 @@ function viewEmployeesByManager() {
                     if (result.length > 0) {
                         console.table(result);
                     } else {
-                        console.log("   NO EMPLOYEES REPORT TO THIS MANAGER");
+                        console.log("\n  NO EMPLOYEES REPORT TO THIS MANAGER\n");
                     }
                     exiter();
                 });
