@@ -434,7 +434,11 @@ function viewEmployeesByManager() {
             connection.query(queries.queryForEmployeesByManager, selection.selectedManager,
                 function (err, result, fields) {
                     if (err) throw err;
-                    console.table(result);
+                    if (result.length > 0) {
+                        console.table(result);
+                    } else {
+                        console.log("   NO EMPLOYEES REPORT TO THIS MANAGER");
+                    }
                     exiter();
                 });
 
