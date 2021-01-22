@@ -28,7 +28,12 @@ async function main() {
                 if (err) throw err;
                 console.table(
                     result.map( 
-                        emp => ( { Name: emp.Name, Title: emp.Title, Manager: emp.Manager } )
+                        emp => ({ 
+                                    Name: emp.Name, 
+                                    Title: emp.Title, 
+                                    Department: emp.Department,
+                                    Manager: emp.Manager
+                                })
                     )
                 );
                 exiter();
@@ -70,12 +75,70 @@ async function main() {
                 );
                 exiter();
             });
+            return;
+        case "View departments":
+            connection.query(queries.queryForAllDepartments, function (err, result, fields) {
+                if (err) throw err;
+                console.table(result);
+                exiter();
+            });
+            return;
+
+        case "Add department":
+            inquirer.prompt({
+                type: "input",
+                message:"Enter new department name: ",
+                name: "depName"
+            }).then( (ans) => {
+                connection.query("INSERT INTO department VALUES (DEFAULT, ?)", 
+                                    ans.depName, 
+                                    function (err, result, fields) {
+                                        if (err) throw err;
+                                        exiter();
+                                        return;
+                                    });
+            });
+            return;
+
+        case "Add role":
+            await addRole();
+            exiter();
+            return;
 
         case "Exit":
             connection.end();
             return;
     }
 
+}
+
+async function addRole() {
+    const [departments, fields] = await connection.promise().query(
+        "SELECT * FROM department"
+    );
+
+    const response = await inquirer.prompt([{
+        type: "input",
+        message: "Enter new role title: ",
+        name: "title"
+    }, {
+        type: "number",
+        message: "Enter new role salary: ",
+        name: "salary"
+    }, {
+        type: "list",
+        message: "Select the department this role belongs to: ",
+        name: "department",
+        choices: departments.map( dep => ({ value: dep.id, name: dep.name }) )
+    }]);
+
+    await connection.promise().query(
+        "INSERT INTO role VALUES (DEFAULT, ?, ?, ?)",
+        [response.title, response.salary, response.department],
+        function (err, result, fields) {
+            if (err) throw err;
+        }
+    );
 }
 
 async function updateEmployeeRole() {
@@ -258,8 +321,9 @@ async function confirmMngrDelete(mngr) {
 
 async function addEmployee() {
 
-    // Get list of possible roles from the database
-    const [roles, fields] = await connection.promise().query(queries.queryForAllRoles);
+    const [departments, fields] = await connection.promise().query(
+        "SELECT * FROM department"
+    );
 
     // Prompt user to input new employee's name and role
     const newEmployee = await inquirer.prompt([
@@ -273,27 +337,46 @@ async function addEmployee() {
             "name": "last_name"
         }, {
             "type": "list",
-            "message": "Select the employee's role:",
-            "name": "role",
-            "choices": roles.map( role => ({ value: role.id, name: role.Title }) )
+            "message": "Select the employee's department:",
+            "name": "department",
+            "choices": departments.map( dep => ({ value: dep.id, name: dep.name }) )
         }
     ]);
 
-    if (newEmployee.role === 1) { // New employee is a manager
+    // Get list of possible roles from the database
+    const [roles, fields2] = await connection.promise().query(
+        "SELECT * FROM role WHERE department_id = ?", newEmployee.department);
+
+    const newRole = await inquirer.prompt({
+        type: "list",
+        message: "Select the employee's role:",
+        name: "selection",
+        choices: roles.map( role => ({ value: role.id, name: role.title }) )
+    })
+
+    if (roles.find( e => e.id === newRole.selection ).Title === "manager") { 
+        // New employee is a manager
         newEmployee["manager"] = null;
     } else {
 
         // New employee is not a manager; query database for list of managers and
         // present another prompt for user to select new employee's manager
         const [managers, fields] = 
-            await connection.promise().query("SELECT * FROM employee WHERE role_id = 1");
+            await connection.promise().query(
+                "SELECT employee.id, employee.last_name, employee.first_name, \
+                    department.name \
+                FROM employee \
+                JOIN role ON employee.role_id = role.id\
+                JOIN department ON role.department_id = department.id \
+                WHERE role.title = \'manager\'"
+            );
         
         const manager = await inquirer.prompt({
             "type": "list",
             "message": "Select the employee's manager:",
             "name": "manager",
             "choices": managers.map(
-                mngr => ({ value: mngr.id, name: `${mngr.last_name}, ${mngr.first_name}` }) )
+                mngr => ({ value: mngr.id, name: `${mngr.last_name}, ${mngr.first_name} (${mngr.name})` }) )
         });
 
         newEmployee["manager"] = manager.manager;
