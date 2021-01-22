@@ -38,6 +38,7 @@ async function main() {
         case "View employees by role":
             viewEmployeesByRole();
             break;
+
         case "View employees by manager":
             viewEmployeesByManager();
             break;
@@ -47,6 +48,15 @@ async function main() {
             break;
         case "Remove employee":
             await removeEmployee();
+            break;
+
+        case "Update employee role":
+            await updateEmployeeRole();
+            exiter();
+            break;
+        case "Update employee manager":
+            await updateEmployeeMngr();
+            exiter();
             break;
         
 
@@ -66,6 +76,99 @@ async function main() {
             return;
     }
 
+}
+
+async function updateEmployeeRole() {
+    const [employees, fields] = await connection.promise().query(queries.queryForAllEmployees);
+
+    const employeeSelect = await inquirer.prompt({
+        type: "list",
+        message: "Select employee to re-assign role:",
+        name: "selection",
+        choices: employees.map(emp => ({ value: emp.id, name: `${emp.Name} (role: ${emp.Title}, manager: ${emp.Manager})` }))
+    });
+
+    selectedEmployee = employees.find(e => e.id === employeeSelect.selection);
+
+    const [roles, fields2] = await connection.promise().query(queries.queryForAllRoles);
+
+    const roleSelect = await inquirer.prompt({
+        type: "list",
+        message: "Select new role:",
+        name: "selection",
+        choices: roles.map(role => ({ value: role.id, name: role.Title }))
+    });
+
+    const confirm = await inquirer.prompt({
+        type: "confirm",
+        message: "Confirm ROLE UPDATE for employee: " +
+            selectedEmployee.Name +
+            " ( " + selectedEmployee.Title + " --> " +
+            roles.find(e => e.id === roleSelect.selection).Title + " )",
+        name: "confirm"
+    });
+
+    if (confirm.confirm) {
+        await connection
+            .promise()
+            .query("UPDATE employee SET role_id = ? WHERE id = ?", [roleSelect.selection, employeeSelect.selection]);
+    } else {
+        console.log("UPDATE operation aborted.")
+    }
+
+}
+
+async function updateEmployeeMngr() {
+    const [employees, fields] = await connection.promise().query(queries.queryForAllEmployees);
+
+    const employeesNoMngrs = employees.filter( e => e.role_id !== 1)
+
+    const employeeSelect = await inquirer.prompt({
+        type: "list",
+        message: "Select employee to re-assign manager:",
+        name: "selection",
+        choices: employeesNoMngrs.map(
+            emp => ({ value: emp.id, name: `${emp.Name} (role: ${emp.Title}, manager: ${emp.Manager})` })
+        )
+    });
+
+    selectedEmployee = employees.find(e => e.id === employeeSelect.selection);
+
+    const [mngrs, fields2]
+        = await connection
+            .promise()
+            .query(queries.queryForAllManagers);
+
+
+    const indexOfManager = mngrs.findIndex(e => e.id === selectedEmployee.manager_id);
+    mngrs.splice(indexOfManager, 1);
+
+    const mngrSelect = await inquirer.prompt({
+        type: "list",
+        message: "Select new manager:",
+        name: "selection",
+        choices: mngrs.map(
+            mngr => ({ value: mngr.id, name: mngr.Name })
+        )
+    });
+
+    const confirm = await inquirer.prompt({
+        type: "confirm",
+        message: "Confirm MANAGER UPDATE for employee: " +
+            selectedEmployee.Name + " ( " +
+            selectedEmployee.Manager + " --> " +
+            mngrs[indexOfManager-1].Name + " )",
+        name: "confirm"
+    });
+
+    if (confirm.confirm) {
+        await connection
+            .promise()
+            .query("UPDATE employee SET manager_id = ? WHERE id = ?",
+                [mngrSelect.selection, selectedEmployee.id]);
+    } else {
+        console.log("UPDATE operation aborted.");
+    }
 }
 
 async function removeEmployee() {
@@ -241,7 +344,7 @@ function viewEmployeesByManager() {
             message: "Select a manager",
             name: "selectedManager",
             choices: result.map( 
-                val => ({ value: val.id, name: `${val.first_name} ${val.last_name}` }) 
+                mngr => ({ value: mngr.id, name: mngr.Name }) 
             )
         }).then((selection) => {
 
