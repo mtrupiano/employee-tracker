@@ -392,14 +392,18 @@ async function addEmployee() {
 }
 
 function viewEmployeesByRole() {
-    connection.query(queries.queryForAllRoles, function (err, result, fields) {
+    connection.query(
+        "SELECT role.title AS Title, role.id, department.name AS Department\
+        FROM role \
+        JOIN department ON role.department_id = department.id", 
+        function (err, result, fields) {
         if (err) throw err;
 
         inquirer.prompt({
             type:"list",
             message:"Select a role",
             name:"selectedRole",
-            choices: result.map( val => ({ value: val.id, name: val.Title }) )
+            choices: result.map( val => ({ value: val.id, name: `${val.Title} (${val.Department})` }) )
         }).then( (selection) => {
 
             connection.query(queries.queryForEmployeesByRole, selection.selectedRole,
