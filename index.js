@@ -93,6 +93,11 @@ async function main() {
             await addDepartment();
             exiter();
             return;
+        
+        case "Remove department":
+            await removeDepartment();
+            exiter();
+            return;
 
         case "Add role":
             await addRole();
@@ -109,6 +114,45 @@ async function main() {
             return;
     }
 
+}
+
+async function removeDepartment() {
+    const [deps, fields] 
+        = await connection.promise().query(queries.queryForAllDepartments);
+    
+    const depSelect = await inquirer.prompt({
+        type: "list",
+        message: "Select department to remove:",
+        name: "selection",
+        choices: deps.map( dep => ({ value: dep.ID, name: dep.Department }))
+    });
+
+    const selectedDepartment = deps.find( dep => dep.ID === depSelect.selection);
+
+    const [rolesInDep, fields2] 
+        = await connection.promise().query(queries.queryForRoleByDep, selectedDepartment.ID);
+
+    if (rolesInDep.length > 0) {
+        console.log("\n  THERE ARE ROLES ASSIGNED TO THIS DEPARTMENT.\n  " + 
+            "THESE ROLES MUST BE REMOVED OR ASSIGNED TO A DIFFERENT " + 
+            "DEPARTMENT BEFORE REMOVING THIS DEPARTMENT.\n");
+    } else {
+        const confirmDelete = await inquirer.prompt({
+            type: "confirm",
+            message: "Are you sure you want to remove the " + 
+                selectedDepartment.Department + " department?\n  " +
+                "WARNING: THIS ACTION IS PERMANENT AND CANNOT BE UNDONE!",
+            name: "confirm"
+        });
+
+        if (confirmDelete.confirm) {
+            await connection
+                    .promise()
+                    .query("DELETE FROM department WHERE id = ?", selectedDepartment.ID);
+        } else {
+            console.log("REMOVE operation aborted.");
+        }
+    }
 }
 
 async function removeRole() {
@@ -231,13 +275,20 @@ async function addRole() {
         choices: departments.map( dep => ({ value: dep.id, name: dep.name }) )
     }]);
 
-    await connection.promise().query(
-        "INSERT INTO role VALUES (DEFAULT, ?, ?, ?)",
-        [response.title, response.salary, response.department],
-        function (err, result, fields) {
-            if (err) throw err;
-        }
-    );
+    const confirmAdd = await inquirer.prompt({
+        type: "confirm",
+        message: "Confirm adding role: " + response.title + 
+            " to the " + departments.find( e => e.id === response.department) + " department?",
+        name: "confirm"
+    });
+
+    if (confirmAdd.confirm) {
+        await connection.promise().query(
+            "INSERT INTO role VALUES (DEFAULT, ?, ?, ?)",
+            [response.title, response.salary, response.department]);
+    } else {
+        console.log("Department ADD operation aborted.");
+    }
 }
 
 async function updateEmployeeRole() {
