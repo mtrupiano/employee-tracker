@@ -463,7 +463,9 @@ async function addEmployee() {
         choices: roles.map( role => ({ value: role.id, name: role.title }) )
     })
 
-    if (roles.find( e => e.id === newRole.selection ).Title === "manager") { 
+    const selectedRole = roles.find(e => e.id === newRole.selection);
+    
+    if (selectedRole.title === "manager") { 
         // New employee is a manager
         newEmployee["manager"] = null;
     } else {
