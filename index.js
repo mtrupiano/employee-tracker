@@ -253,20 +253,23 @@ async function updateEmployeeRole() {
     selectedEmployee = employees.find(e => e.id === employeeSelect.selection);
 
     const [roles, fields2] = await connection.promise().query(queries.queryForAllRoles);
+    const rolesInDepartment = roles.filter( e => e.depID === selectedEmployee.depID);
 
     const roleSelect = await inquirer.prompt({
         type: "list",
-        message: "Select new role:",
+        message: "Select new role (in " + selectedEmployee.Department + " department):",
         name: "selection",
-        choices: roles.map(role => ({ value: role.id, name: role.Title }))
+        choices: rolesInDepartment.map(role => ({ value: role.id, name: role.Title }))
     });
+
+    const selectedRole = roles.find(e => e.id === roleSelect.selection);
 
     const confirm = await inquirer.prompt({
         type: "confirm",
         message: "Confirm ROLE UPDATE for employee: " +
             selectedEmployee.Name +
             " ( " + selectedEmployee.Title + " --> " +
-            roles.find(e => e.id === roleSelect.selection).Title + " )",
+            selectedRole.Title + " )",
         name: "confirm"
     });
 
@@ -464,7 +467,7 @@ async function addEmployee() {
     })
 
     const selectedRole = roles.find(e => e.id === newRole.selection);
-    
+
     if (selectedRole.title === "manager") { 
         // New employee is a manager
         newEmployee["manager"] = null;
