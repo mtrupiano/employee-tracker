@@ -453,8 +453,6 @@ async function addEmployee() {
     const [roles, fields2] = await connection.promise().query(
         "SELECT role.title, role.id FROM role WHERE department_id = ?", newEmployee.department);
     
-    console.log(roles);
-    
     if (roles.length === 0) {
         console.log("/n  There are no roles assigned to this department." +
             "Please create roles before adding employees to this department.");
@@ -498,13 +496,11 @@ async function addEmployee() {
         newEmployee["manager"] = manager.manager;
     }
 
-    delete newEmployee.department;
-    newEmployee["role"] = selectedRole.id;
     // Insert new employee into database
     await connection
         .promise()
         .query("INSERT INTO employee VALUES (DEFAULT, ?, ?, ?, ?)", 
-                Object.values(newEmployee));
+                [newEmployee.first_name, newEmployee.last_name, selectedRole.id, newEmployee.manager]);
 }
 
 function viewEmployeesByRole() {
