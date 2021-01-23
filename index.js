@@ -348,7 +348,7 @@ async function removeEmployee() {
         name: "selected",
         choices: employees.map( emp => ({ value: emp.id, name: emp.Name }) )
     });
-    
+
     const employee = employees.find( e => e.id === employeeToRemove.selected );
 
     // Check/handle if employee is a manager
@@ -451,7 +451,7 @@ async function addEmployee() {
 
     // Get list of possible roles from the database
     const [roles, fields2] = await connection.promise().query(
-        "SELECT title, id FROM role WHERE department_id = ?", newEmployee.department);
+        "SELECT role.title, role.id FROM role WHERE department_id = ?", newEmployee.department);
     
     console.log(roles);
     
@@ -467,8 +467,8 @@ async function addEmployee() {
         name: "selection",
         choices: roles.map( role => ({ value: role.id, name: role.title }) )
     });
-
-    const selectedRole = roles.find(e => e.id === newRole.selection);
+    
+    const selectedRole = roles.find( e => e.id === newRole.selection );
 
     if (selectedRole.title === "manager") { 
         // New employee is a manager
@@ -498,6 +498,8 @@ async function addEmployee() {
         newEmployee["manager"] = manager.manager;
     }
 
+    delete newEmployee.department;
+    newEmployee["role"] = selectedRole.id;
     // Insert new employee into database
     await connection
         .promise()
